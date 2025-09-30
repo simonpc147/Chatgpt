@@ -30,6 +30,7 @@ class AI_Chat_Manager
         require_once AI_CHAT_PLUGIN_PATH . 'includes/functions.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/admin-panel.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-openrouter-api.php';
+        require_once AI_CHAT_PLUGIN_PATH . 'includes/class-image-handler.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-models-manager.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-projects-manager.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-conversation-manager.php';
@@ -62,6 +63,7 @@ class AI_Chat_Manager
     {
         ai_chat_create_user_keys_table();
         ai_chat_create_usage_table();
+        ai_chat_update_database_for_imagerouter();
         $this->create_user_roles();
         flush_rewrite_rules();
     }

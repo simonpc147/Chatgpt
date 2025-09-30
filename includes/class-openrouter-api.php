@@ -28,6 +28,11 @@ class AI_Chat_OpenRouter_API
             'temperature' => 0.7
         );
 
+        error_log('=== OPENROUTER REQUEST ===');
+        error_log('Model: ' . $model);
+        error_log('Messages count: ' . count($messages));
+        error_log('Body: ' . json_encode($body));
+
         $response = wp_remote_post($this->base_url, array(
             'headers' => $headers,
             'body' => json_encode($body),
@@ -35,19 +40,41 @@ class AI_Chat_OpenRouter_API
         ));
 
         if (is_wp_error($response)) {
+            error_log('WP Error: ' . $response->get_error_message());
             return array('error' => 'Error de conexión: ' . $response->get_error_message());
         }
 
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
 
+        $response_body = trim($response_body);
+
+        error_log('=== OPENROUTER RESPONSE ===');
+        error_log('Code: ' . $response_code);
+        error_log('Body: ' . $response_body);
+
         if ($response_code !== 200) {
-            return array('error' => 'Error API: ' . $response_code);
+            $error_data = json_decode($response_body, true);
+
+            if ($response_code == 429) {
+                $error_message = 'El modelo está temporalmente saturado. Intenta con otro modelo o espera unos minutos.';
+            } elseif (isset($error_data['error']['metadata']['raw'])) {
+                $error_message = $error_data['error']['metadata']['raw'];
+            } elseif (isset($error_data['error']['message'])) {
+                $error_message = $error_data['error']['message'];
+            } else {
+                $error_message = 'Error API: ' . $response_code;
+            }
+
+            error_log('Error Message: ' . $error_message);
+            return array('error' => $error_message);
         }
 
         $data = json_decode($response_body, true);
 
         if (!$data || !isset($data['choices'][0]['message']['content'])) {
+            error_log('Invalid Response Structure');
+            error_log('JSON Error: ' . json_last_error_msg());
             return array('error' => 'Respuesta inválida de la API');
         }
 
@@ -68,32 +95,42 @@ class AI_Chat_OpenRouter_API
             case 'premium':
                 return 2000;
             default:
-                return 1000;
+                return 2000;
         }
     }
 
     public function get_available_models()
     {
         return array(
-            'openai/gpt-4' => array(
-                'name' => 'GPT-4',
-                'description' => 'Modelo más avanzado de OpenAI',
-                'plans' => array('premium', 'enterprise')
-            ),
-            'openai/gpt-3.5-turbo' => array(
-                'name' => 'GPT-3.5 Turbo',
-                'description' => 'Rápido y eficiente',
+            'google/gemini-2.5-flash' => array(
+                'name' => 'Gemini 2.5 Flash',
+                'description' => 'Modelo rápido de Google',
                 'plans' => array('free', 'premium', 'enterprise')
             ),
-            'anthropic/claude-3-sonnet' => array(
-                'name' => 'Claude 3 Sonnet',
-                'description' => 'Equilibrio perfecto',
+            'openai/gpt-4o-mini' => array(
+                'name' => 'GPT-4o Mini',
+                'description' => 'Rápido y económico',
+                'plans' => array('free', 'premium', 'enterprise')
+            ),
+            'anthropic/claude-3.5-sonnet' => array(
+                'name' => 'Claude 3.5 Sonnet',
+                'description' => 'Equilibrio perfecto de velocidad y calidad',
                 'plans' => array('premium', 'enterprise')
             ),
-            'google/gemini-pro' => array(
-                'name' => 'Gemini Pro',
-                'description' => 'Modelo de Google',
-                'plans' => array('free', 'premium', 'enterprise')
+            'anthropic/claude-opus-4' => array(
+                'name' => 'Claude Opus 4',
+                'description' => 'Modelo más avanzado de Anthropic',
+                'plans' => array('enterprise')
+            ),
+            'openai/gpt-4o' => array(
+                'name' => 'GPT-4o',
+                'description' => 'Modelo más reciente de OpenAI',
+                'plans' => array('premium', 'enterprise')
+            ),
+            'google/gemini-2.5-pro-preview' => array(
+                'name' => 'Gemini 2.5 Pro',
+                'description' => 'Modelo avanzado de Google',
+                'plans' => array('premium', 'enterprise')
             )
         );
     }

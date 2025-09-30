@@ -129,7 +129,7 @@ class AI_Chat_Conversation_Manager
         $conversation = get_post($conversation_id);
 
         if (!$conversation || $conversation->post_author != $user_id) {
-            return false;
+            return array();
         }
 
         $messages = get_posts(array(

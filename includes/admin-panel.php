@@ -40,13 +40,28 @@ class AI_Chat_Admin
         if (isset($_POST['update_key']) && wp_verify_nonce($_POST['ai_chat_nonce'], 'update_user_key')) {
             $user_id = intval($_POST['user_id']);
             $new_key = ai_chat_validate_and_sanitize_key($_POST['api_key']);
+            $new_image_key = ai_chat_validate_and_sanitize_key($_POST['imagerouter_api_key']);
             $plan = ai_chat_validate_plan($_POST['plan']);
 
-            if ($new_key) {
-                ai_chat_update_user_key($user_id, $new_key, $plan);
-                $message = '<div class="notice notice-success"><p>API Key actualizada correctamente</p></div>';
+            if ($new_key && $new_image_key) {
+                global $wpdb;
+                $table_name = $wpdb->prefix . 'ai_user_keys';
+
+                $wpdb->update(
+                    $table_name,
+                    array(
+                        'api_key' => $new_key,
+                        'imagerouter_api_key' => $new_image_key,
+                        'plan' => $plan
+                    ),
+                    array('user_id' => $user_id),
+                    array('%s', '%s', '%s'),
+                    array('%d')
+                );
+
+                $message = '<div class="notice notice-success"><p>API Keys actualizadas correctamente</p></div>';
             } else {
-                $message = '<div class="notice notice-error"><p>API Key inválida. Debe tener al menos 20 caracteres</p></div>';
+                $message = '<div class="notice notice-error"><p>API Keys inválidas. Deben tener al menos 20 caracteres</p></div>';
             }
         }
 
@@ -64,7 +79,8 @@ class AI_Chat_Admin
                         <th>Usuario</th>
                         <th>Email</th>
                         <th>Plan</th>
-                        <th>API Key</th>
+                        <th>OpenRouter Key</th>
+                        <th>ImageRouter Key</th>
                         <th>Registro</th>
                         <th>Acciones</th>
                     </tr>
@@ -77,9 +93,10 @@ class AI_Chat_Admin
                             <td><?php echo esc_html($user->user_email); ?></td>
                             <td><?php echo esc_html($user->plan ?: 'Sin plan'); ?></td>
                             <td><?php echo $user->api_key ? esc_html(substr($user->api_key, 0, 20)) . '...' : 'Sin key'; ?></td>
+                            <td><?php echo isset($user->imagerouter_api_key) && $user->imagerouter_api_key ? esc_html(substr($user->imagerouter_api_key, 0, 20)) . '...' : 'Sin key'; ?></td>
                             <td><?php echo esc_html(date('Y-m-d', strtotime($user->user_registered))); ?></td>
                             <td>
-                                <button class="button" onclick="editKey(<?php echo $user->ID; ?>, '<?php echo esc_js($user->api_key); ?>', '<?php echo esc_js($user->plan); ?>')">
+                                <button class="button" onclick="editKey(<?php echo $user->ID; ?>, '<?php echo esc_js($user->api_key); ?>', '<?php echo esc_js($user->imagerouter_api_key ?? ''); ?>', '<?php echo esc_js($user->plan); ?>')">
                                     Editar
                                 </button>
                             </td>
@@ -90,13 +107,17 @@ class AI_Chat_Admin
 
             <div id="edit-key-modal" style="display:none;">
                 <div class="modal-content">
-                    <h3>Editar API Key</h3>
+                    <h3>Editar API Keys</h3>
                     <form method="post">
                         <?php wp_nonce_field('update_user_key', 'ai_chat_nonce'); ?>
                         <input type="hidden" id="edit-user-id" name="user_id">
                         <p>
-                            <label>API Key:</label><br>
+                            <label>OpenRouter API Key:</label><br>
                             <input type="text" id="edit-api-key" name="api_key" style="width:100%;" required>
+                        </p>
+                        <p>
+                            <label>ImageRouter API Key:</label><br>
+                            <input type="text" id="edit-imagerouter-key" name="imagerouter_api_key" style="width:100%;" required>
                         </p>
                         <p>
                             <label>Plan:</label><br>
@@ -121,10 +142,12 @@ class AI_Chat_Admin
     {
         if (isset($_POST['save_config']) && wp_verify_nonce($_POST['ai_chat_config_nonce'], 'save_config')) {
             update_option('ai_chat_default_key', sanitize_text_field($_POST['default_key']));
+            update_option('ai_chat_imagerouter_default_key', sanitize_text_field($_POST['default_imagerouter_key']));
             echo '<div class="notice notice-success"><p>Configuración guardada</p></div>';
         }
 
         $default_key = get_option('ai_chat_default_key', '');
+        $default_imagerouter_key = get_option('ai_chat_imagerouter_default_key', '');
 
     ?>
         <div class="wrap">
@@ -134,10 +157,17 @@ class AI_Chat_Admin
                 <?php wp_nonce_field('save_config', 'ai_chat_config_nonce'); ?>
                 <table class="form-table">
                     <tr>
-                        <th scope="row">API Key por Defecto</th>
+                        <th scope="row">OpenRouter API Key por Defecto</th>
                         <td>
                             <input type="text" name="default_key" value="<?php echo esc_attr($default_key); ?>" class="regular-text">
-                            <p class="description">Esta key se asignará a nuevos usuarios</p>
+                            <p class="description">Esta key se asignará a nuevos usuarios para texto</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">ImageRouter API Key por Defecto</th>
+                        <td>
+                            <input type="text" name="default_imagerouter_key" value="<?php echo esc_attr($default_imagerouter_key); ?>" class="regular-text">
+                            <p class="description">Esta key se asignará a nuevos usuarios para imágenes</p>
                         </td>
                     </tr>
                 </table>

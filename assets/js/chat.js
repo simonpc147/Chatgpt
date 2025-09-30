@@ -2,36 +2,37 @@
   let currentConversationId = null;
   let isLoading = false;
 
-  $(document).ready(function () {
-    initializeChat();
-    loadConversations();
-    attachEventListeners();
-  });
-
   function initializeChat() {
     console.log("Chat initialized");
   }
 
-  function attachEventListeners() {
-    $("#new-chat-btn").on("click", createNewConversation);
-    $("#send-btn").on("click", sendMessage);
+  function loadModels() {
+    $.ajax({
+      url: aiChatAjax.resturl + "get-models",
+      method: "GET",
+      success: function (response) {
+        if (response.success && response.models) {
+          renderModels(response.models);
+        }
+      },
+      error: function () {
+        console.error("Error al cargar modelos");
+      },
+    });
+  }
 
-    $("#chat-input").on("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
+  function renderModels(models) {
+    const $selector = $("#model-selector");
+    $selector.empty();
+
+    Object.keys(models).forEach(function (modelId) {
+      const model = models[modelId];
+      $selector.append($("<option>").val(modelId).text(model.name));
     });
 
-    $(".quick-action").on("click", function () {
-      const prompt = $(this).data("prompt");
-      $("#chat-input").val(prompt).focus();
-    });
-
-    $(document).on("click", ".conversation-item", function () {
-      const conversationId = $(this).data("id");
-      loadConversation(conversationId);
-    });
+    if ($selector.children().length > 0) {
+      $selector.prop("disabled", false);
+    }
   }
 
   function loadConversations() {
@@ -109,12 +110,16 @@
         conversationId,
       method: "GET",
       success: function (response) {
+        console.log("Response:", response);
+        console.log("Messages:", response.messages);
+
         if (response.success) {
           $("#chat-title").text(response.conversation.title);
-          renderMessages(response.messages);
+          renderMessages(response.messages || []);
         }
       },
-      error: function () {
+      error: function (xhr) {
+        console.error("Error loading conversation:", xhr);
         alert("Error al cargar conversación");
       },
     });
@@ -124,7 +129,7 @@
     const $container = $("#chat-messages");
     $container.empty();
 
-    if (messages.length === 0) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       $container.html(
         '<div class="welcome-screen"><p>Comienza a chatear escribiendo un mensaje</p></div>'
       );
@@ -132,7 +137,11 @@
     }
 
     messages.forEach(function (msg) {
-      appendMessage(msg.role, msg.content, false);
+      const isImage =
+        msg.model === "image-generator" ||
+        (msg.content && msg.content.startsWith("http"));
+      const type = isImage ? "image" : "text";
+      appendMessage(msg.role, msg.content, false, type);
     });
 
     scrollToBottom();
@@ -146,6 +155,11 @@
 
     if (!message) {
       alert("Escribe un mensaje");
+      return;
+    }
+
+    if (!model) {
+      alert("Selecciona un modelo");
       return;
     }
 
@@ -174,8 +188,8 @@
         hideTypingIndicator();
 
         if (response.success) {
-          appendMessage("assistant", response.message, true);
-          loadConversations();
+          const messageType = response.type || "text";
+          appendMessage("assistant", response.content, true, messageType);
         } else {
           alert("Error: " + (response.message || "Error desconocido"));
         }
@@ -193,19 +207,35 @@
     });
   }
 
-  function appendMessage(role, content, animate) {
+  function appendMessage(role, content, animate, type) {
     const $messages = $("#chat-messages");
 
     if ($messages.find(".welcome-screen").length) {
       $messages.empty();
     }
 
-    const $message = $("<div>").addClass("message").addClass(role).html(`
-                <div class="message-content">
-                    ${escapeHtml(content)}
-                    <div class="message-meta">${new Date().toLocaleTimeString()}</div>
-                </div>
-            `);
+    let messageHtml;
+
+    if (type === "image") {
+      messageHtml = `
+            <div class="message-content">
+                <img src="${content}" alt="Generated image" style="max-width: 100%; border-radius: 8px; margin: 10px 0;">
+                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
+            </div>
+        `;
+    } else {
+      messageHtml = `
+            <div class="message-content">
+                ${escapeHtml(content)}
+                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
+            </div>
+        `;
+    }
+
+    const $message = $("<div>")
+      .addClass("message")
+      .addClass(role)
+      .html(messageHtml);
 
     if (animate) {
       $message.hide().appendTo($messages).fadeIn(300);
@@ -217,23 +247,23 @@
   }
 
   function showTypingIndicator() {
-    const $indicator = $("<div>").addClass("message assistant typing-indicator")
+    const $indicator = $("<div>").addClass("message assistant typing-message")
       .html(`
-                <div class="message-content">
-                    <div class="typing-indicator">
-                        <span class="typing-dot"></span>
-                        <span class="typing-dot"></span>
-                        <span class="typing-dot"></span>
-                    </div>
+            <div class="message-content">
+                <div class="typing-indicator">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
                 </div>
-            `);
+            </div>
+        `);
 
     $("#chat-messages").append($indicator);
     scrollToBottom();
   }
 
   function hideTypingIndicator() {
-    $(".typing-indicator").parent().parent().remove();
+    $(".typing-message").remove();
   }
 
   function clearMessages() {
@@ -254,4 +284,33 @@
     div.textContent = text;
     return div.innerHTML.replace(/\n/g, "<br>");
   }
+
+  function attachEventListeners() {
+    $("#new-chat-btn").on("click", createNewConversation);
+    $("#send-btn").on("click", sendMessage);
+
+    $("#chat-input").on("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    $(".quick-action").on("click", function () {
+      const prompt = $(this).data("prompt");
+      $("#chat-input").val(prompt).focus();
+    });
+
+    $(document).on("click", ".conversation-item", function () {
+      const conversationId = $(this).data("id");
+      loadConversation(conversationId);
+    });
+  }
+
+  $(document).ready(function () {
+    initializeChat();
+    loadModels();
+    loadConversations();
+    attachEventListeners();
+  });
 })(jQuery);

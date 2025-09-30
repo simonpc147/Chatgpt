@@ -3,6 +3,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+add_action('init', 'force_add_imagerouter_column', 1);
+function force_add_imagerouter_column()
+{
+    if (!get_option('imagerouter_column_added')) {
+        ai_chat_update_database_for_imagerouter();
+        update_option('imagerouter_column_added', true);
+    }
+}
+
 function ai_chat_create_user_keys_table()
 {
     global $wpdb;
@@ -98,12 +107,11 @@ function ai_chat_insert_user_key($user_id, $api_key, $plan = 'free')
 function ai_chat_get_all_users_with_keys()
 {
     global $wpdb;
-
     $table_name = $wpdb->prefix . 'ai_user_keys';
 
     return $wpdb->get_results("
         SELECT u.ID, u.user_login, u.user_email, u.user_registered, 
-               k.api_key, k.plan, k.created_at, k.updated_at
+               k.api_key, k.imagerouter_api_key, k.plan, k.created_at, k.updated_at
         FROM {$wpdb->users} u
         LEFT JOIN $table_name k ON u.ID = k.user_id
         ORDER BY u.user_registered DESC
@@ -172,4 +180,51 @@ function ai_chat_get_user_usage_stats($user_id, $days = 30)
         GROUP BY model
         ORDER BY total_cost DESC
     ", $user_id, $days));
+}
+
+function ai_chat_update_database_for_imagerouter()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'ai_user_keys';
+
+    $column_exists = $wpdb->get_results(
+        "SHOW COLUMNS FROM `{$table_name}` LIKE 'imagerouter_api_key'"
+    );
+
+    if (empty($column_exists)) {
+        $wpdb->query("ALTER TABLE `{$table_name}` ADD `imagerouter_api_key` VARCHAR(255) NOT NULL DEFAULT '' AFTER `api_key`");
+    }
+}
+
+
+add_action('admin_init', 'ai_chat_migrate_existing_users_once');
+function ai_chat_migrate_existing_users_once()
+{
+    if (get_option('ai_chat_users_migrated')) {
+        return;
+    }
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'ai_user_keys';
+    $default_imagerouter_key = get_option('ai_chat_imagerouter_default_key', '');
+
+    if (empty($default_imagerouter_key)) {
+        return;
+    }
+
+    $users_without_imagekey = $wpdb->get_results(
+        "SELECT user_id FROM {$table_name} WHERE imagerouter_api_key = '' OR imagerouter_api_key IS NULL"
+    );
+
+    foreach ($users_without_imagekey as $user) {
+        $wpdb->update(
+            $table_name,
+            array('imagerouter_api_key' => $default_imagerouter_key),
+            array('user_id' => $user->user_id),
+            array('%s'),
+            array('%d')
+        );
+    }
+
+    update_option('ai_chat_users_migrated', true);
 }

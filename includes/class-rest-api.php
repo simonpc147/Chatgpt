@@ -183,18 +183,20 @@ class AI_Chat_REST_API
             return new WP_Error('missing_param', 'conversation_id es requerido', array('status' => 400));
         }
 
-        $user_id = get_current_user_id(); // O usar 1 si sigues con user temporal
+        $user_id = 1;
 
         $conversation_manager = new AI_Chat_Conversation_Manager();
 
-        // Obtener conversación
         $conversation = get_post($conversation_id);
         if (!$conversation) {
             return new WP_Error('not_found', 'Conversación no encontrada', array('status' => 404));
         }
 
-        // Obtener mensajes
         $messages = $conversation_manager->get_conversation_messages($conversation_id, $user_id, 100);
+
+        if ($messages === false) {
+            $messages = array();
+        }
 
         return rest_ensure_response(array(
             'success' => true,
@@ -202,7 +204,7 @@ class AI_Chat_REST_API
                 'id' => $conversation->ID,
                 'title' => $conversation->post_title
             ),
-            'messages' => $messages
+            'messages' => is_array($messages) ? $messages : array()
         ));
     }
 }

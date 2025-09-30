@@ -7,10 +7,13 @@ class AI_Chat_Handler
 {
 
     private $openrouter_api;
+    private $image_handler;
+
 
     public function __construct()
     {
         $this->openrouter_api = new AI_Chat_OpenRouter_API();
+        $this->image_handler = new AI_Chat_Image_Handler();
     }
 
     public function process_message($user_id, $message, $model, $conversation_id = null)
@@ -23,11 +26,8 @@ class AI_Chat_Handler
             return array('error' => 'Mensaje inválido');
         }
 
-        if (!$this->validate_model_for_user($user_id, $model)) {
-            return array('error' => 'Modelo no disponible para tu plan');
-        }
-
         $api_key = ai_chat_get_user_api_key($user_id);
+
         if (!$api_key) {
             return array('error' => 'API Key no configurada. Contacta al administrador.');
         }
@@ -37,11 +37,41 @@ class AI_Chat_Handler
         }
 
         $conversation_manager = new AI_Chat_Conversation_Manager();
+        $conversation_manager->add_message($conversation_id, 'user', $message);
+
+        if ($this->image_handler->should_generate_image($message)) {
+            $prompt = $this->image_handler->extract_image_prompt($message);
+
+            error_log('Generating image for: ' . $prompt);
+
+            $imagerouter_key = ai_chat_get_imagerouter_api_key($user_id);
+
+            if (empty($imagerouter_key)) {
+                return array('error' => 'ImageRouter API Key no configurada');
+            }
+
+            $image_result = $this->image_handler->generate_image($imagerouter_key, $prompt);
+
+            if (isset($image_result['error'])) {
+                return $image_result;
+            }
+
+            $conversation_manager->add_message($conversation_id, 'assistant', $image_result['url'], 'image-generator');
+
+            return array(
+                'success' => true,
+                'type' => 'image',
+                'content' => $image_result['url'],
+                'conversation_id' => $conversation_id
+            );
+        }
+
+        if (!$this->validate_model_for_user($user_id, $model)) {
+            return array('error' => 'Modelo no disponible para tu plan');
+        }
 
         $conversation_history = $this->get_conversation_history($conversation_id);
         $messages = $this->prepare_messages($conversation_history, $message);
-
-        $conversation_manager->add_message($conversation_id, 'user', $message);
 
         $response = $this->openrouter_api->send_message($api_key, $model, $messages, $user_id);
 
@@ -53,7 +83,8 @@ class AI_Chat_Handler
 
         return array(
             'success' => true,
-            'message' => $response['content'],
+            'type' => 'text',
+            'content' => $response['content'],
             'conversation_id' => $conversation_id,
             'usage' => $response['usage'] ?? null
         );
