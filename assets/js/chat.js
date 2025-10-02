@@ -4,6 +4,9 @@
 
   function initializeChat() {
     console.log("Chat initialized");
+    if (typeof AIChatImageUploader !== "undefined") {
+      AIChatImageUploader.init();
+    }
   }
 
   function loadModels() {
@@ -86,6 +89,7 @@
       success: function (response) {
         if (response.success) {
           currentConversationId = response.conversation_id;
+          updateImageUploaderContext();
           loadConversations();
           clearMessages();
           $("#chat-title").text("Nueva Conversación");
@@ -99,6 +103,7 @@
 
   function loadConversation(conversationId) {
     currentConversationId = conversationId;
+    updateImageUploaderContext();
 
     $(".conversation-item").removeClass("active");
     $(`.conversation-item[data-id="${conversationId}"]`).addClass("active");
@@ -125,6 +130,13 @@
     });
   }
 
+  function updateImageUploaderContext() {
+    if (typeof AIChatImageUploader !== "undefined") {
+      const projectId = $("#project-selector").val() || null;
+      AIChatImageUploader.setContext(currentConversationId, projectId);
+    }
+  }
+
   function renderMessages(messages) {
     const $container = $("#chat-messages");
     $container.empty();
@@ -141,20 +153,23 @@
         msg.model === "image-generator" ||
         (msg.content && msg.content.startsWith("http"));
       const type = isImage ? "image" : "text";
-      appendMessage(msg.role, msg.content, false, type);
+      appendMessage(msg.role, msg.content, false, type, msg.attachments);
     });
 
     scrollToBottom();
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     if (isLoading) return;
 
     const message = $("#chat-input").val().trim();
     const model = $("#model-selector").val();
+    const hasImages =
+      typeof AIChatImageUploader !== "undefined" &&
+      AIChatImageUploader.hasFiles();
 
-    if (!message) {
-      alert("Escribe un mensaje");
+    if (!message && !hasImages) {
+      alert("Escribe un mensaje o adjunta una imagen");
       return;
     }
 
@@ -172,18 +187,40 @@
     $("#send-btn").prop("disabled", true);
     $("#chat-input").val("");
 
-    appendMessage("user", message, true);
+    let uploadedFiles = null;
+
+    if (hasImages) {
+      uploadedFiles = await AIChatImageUploader.upload();
+
+      if (!uploadedFiles) {
+        isLoading = false;
+        $("#send-btn").prop("disabled", false);
+        return;
+      }
+    }
+
+    appendMessage("user", message, true, "text", uploadedFiles);
     showTypingIndicator();
+
+    if (hasImages) {
+      AIChatImageUploader.clear();
+    }
+
+    const requestData = {
+      message: message,
+      model: model,
+      conversation_id: currentConversationId,
+    };
+
+    if (uploadedFiles) {
+      requestData.attachments = uploadedFiles;
+    }
 
     $.ajax({
       url: aiChatAjax.resturl + "send-message",
       method: "POST",
       contentType: "application/json",
-      data: JSON.stringify({
-        message: message,
-        model: model,
-        conversation_id: currentConversationId,
-      }),
+      data: JSON.stringify(requestData),
       success: function (response) {
         hideTypingIndicator();
 
@@ -207,30 +244,31 @@
     });
   }
 
-  function appendMessage(role, content, animate, type) {
+  function appendMessage(role, content, animate, type, attachments) {
     const $messages = $("#chat-messages");
 
     if ($messages.find(".welcome-screen").length) {
       $messages.empty();
     }
 
-    let messageHtml;
+    let messageHtml = '<div class="message-content">';
+
+    if (attachments && attachments.length > 0) {
+      messageHtml += '<div class="message-attachments">';
+      attachments.forEach(function (attachment) {
+        messageHtml += `<img src="${attachment.file_url}" alt="${attachment.file_name}" class="message-image">`;
+      });
+      messageHtml += "</div>";
+    }
 
     if (type === "image") {
-      messageHtml = `
-            <div class="message-content">
-                <img src="${content}" alt="Generated image" style="max-width: 100%; border-radius: 8px; margin: 10px 0;">
-                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
-            </div>
-        `;
-    } else {
-      messageHtml = `
-            <div class="message-content">
-                ${escapeHtml(content)}
-                <div class="message-meta">${new Date().toLocaleTimeString()}</div>
-            </div>
-        `;
+      messageHtml += `<img src="${content}" alt="Generated image" class="generated-image">`;
+    } else if (content) {
+      messageHtml += escapeHtml(content);
     }
+
+    messageHtml += `<div class="message-meta">${new Date().toLocaleTimeString()}</div>`;
+    messageHtml += "</div>";
 
     const $message = $("<div>")
       .addClass("message")
@@ -304,6 +342,10 @@
     $(document).on("click", ".conversation-item", function () {
       const conversationId = $(this).data("id");
       loadConversation(conversationId);
+    });
+
+    $("#project-selector").on("change", function () {
+      updateImageUploaderContext();
     });
   }
 

@@ -6,7 +6,8 @@ if (!defined('ABSPATH')) {
 class AI_Chat_Image_Handler
 {
     private $api_url = 'https://api.imagerouter.io/v1/openai/images/generations';
-    private $model = 'google/gemini-2.5-flash';
+    // private $model = 'google/gemini-2.5-flash'; 
+    private $model = 'openai/gpt-image-1';
 
     public function generate_image($api_key, $prompt)
     {

@@ -31,6 +31,8 @@ class AI_Chat_Manager
         require_once AI_CHAT_PLUGIN_PATH . 'includes/admin-panel.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-openrouter-api.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-image-handler.php';
+        require_once AI_CHAT_PLUGIN_PATH . 'includes/class-image-uploader.php';
+        require_once AI_CHAT_PLUGIN_PATH . 'includes/class-imagerouter-vision-api.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-models-manager.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-projects-manager.php';
         require_once AI_CHAT_PLUGIN_PATH . 'includes/class-conversation-manager.php';
@@ -48,6 +50,7 @@ class AI_Chat_Manager
 
         add_action('user_register', array($this, 'assign_default_key'));
         add_action('admin_enqueue_scripts', array($this, 'load_admin_assets'));
+        add_action('wp_enqueue_scripts', array($this, 'load_frontend_assets'));
     }
 
     private function init_managers()
@@ -106,6 +109,16 @@ class AI_Chat_Manager
             wp_enqueue_style('ai-chat-admin-css', AI_CHAT_PLUGIN_URL . 'assets/css/admin.css', array(), '1.0');
             wp_enqueue_script('ai-chat-admin-js', AI_CHAT_PLUGIN_URL . 'assets/js/admin.js', array(), '1.0', true);
         }
+    }
+
+    public function load_frontend_assets()
+    {
+        wp_enqueue_script('ai-chat-image-uploader', AI_CHAT_PLUGIN_URL . 'assets/js/image-uploader.js', array('jquery'), '1.0', true);
+
+        wp_localize_script('ai-chat-image-uploader', 'aiChatSettings', array(
+            'apiUrl' => rest_url('ai-chat/v1'),
+            'nonce' => wp_create_nonce('wp_rest')
+        ));
     }
 }
 

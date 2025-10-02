@@ -67,14 +67,30 @@ $projects = $projects_manager->get_user_projects($user_id);
         </div>
 
         <div class="chat-input-container">
-            <textarea
-                id="chat-input"
-                placeholder="Escribe tu mensaje aquí... (Shift+Enter para nueva línea)"
-                rows="3"></textarea>
-            <button id="send-btn" class="btn-send">
-                <span class="send-icon">➤</span>
-                Enviar
-            </button>
+            <div id="image-previews" class="image-previews"></div>
+
+            <div class="input-wrapper">
+                <input
+                    type="file"
+                    id="image-input"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    style="display:none">
+
+                <button id="attach-image-btn" class="btn-attach" title="Adjuntar imagen">
+                    📎
+                </button>
+
+                <textarea
+                    id="chat-input"
+                    placeholder="Escribe tu mensaje aquí... (Shift+Enter para nueva línea)"
+                    rows="3"></textarea>
+
+                <button id="send-btn" class="btn-send">
+                    <span class="send-icon">➤</span>
+                    Enviar
+                </button>
+            </div>
         </div>
     </div>
 </div>

@@ -16,7 +16,7 @@ class AI_Chat_Handler
         $this->image_handler = new AI_Chat_Image_Handler();
     }
 
-    public function process_message($user_id, $message, $model, $conversation_id = null)
+    public function process_message($user_id, $message, $model, $conversation_id = null, $attachments = null)
     {
         if (!$this->validate_user_permissions($user_id)) {
             return array('error' => 'Usuario sin permisos');
@@ -37,6 +37,36 @@ class AI_Chat_Handler
         }
 
         $conversation_manager = new AI_Chat_Conversation_Manager();
+
+        if (!empty($attachments)) {
+            $imagerouter_key = ai_chat_get_imagerouter_api_key($user_id);
+
+            if (empty($imagerouter_key)) {
+                return array('error' => 'ImageRouter API Key no configurada');
+            }
+
+            $conversation_manager->add_message($conversation_id, 'user', $message, null, array(
+                'attachments' => json_encode($attachments)
+            ));
+
+            $vision_api = new AI_Chat_ImageRouter_Vision_API();
+            $response = $vision_api->send_vision_request($imagerouter_key, $message, $attachments);
+
+            if (isset($response['error'])) {
+                return $response;
+            }
+
+            $conversation_manager->add_message($conversation_id, 'assistant', $response['content'], $response['model']);
+
+            return array(
+                'success' => true,
+                'type' => 'text',
+                'content' => $response['content'],
+                'conversation_id' => $conversation_id,
+                'usage' => $response['usage'] ?? null
+            );
+        }
+
         $conversation_manager->add_message($conversation_id, 'user', $message);
 
         if ($this->image_handler->should_generate_image($message)) {

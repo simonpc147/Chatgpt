@@ -75,6 +75,12 @@ class AI_Chat_REST_API
             'callback' => array($this, 'get_conversation_history'),
             'permission_callback' => '__return_true'
         ));
+
+        register_rest_route('ai-chat/v1', '/upload-images', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'upload_images'),
+            'permission_callback' => '__return_true'
+        ));
     }
 
     public function check_user_permissions()
@@ -106,12 +112,13 @@ class AI_Chat_REST_API
 
     public function send_message($request)
     {
-        $user_id = 1; // TEMPORAL
+        $user_id = 1;
         $message = $request->get_param('message');
         $model = $request->get_param('model');
         $conversation_id = $request->get_param('conversation_id');
+        $attachments = $request->get_param('attachments');
 
-        $response = $this->chat_handler->process_message($user_id, $message, $model, $conversation_id);
+        $response = $this->chat_handler->process_message($user_id, $message, $model, $conversation_id, $attachments);
 
         if (isset($response['error'])) {
             return new WP_Error('chat_error', $response['error'], array('status' => 400));
@@ -205,6 +212,34 @@ class AI_Chat_REST_API
                 'title' => $conversation->post_title
             ),
             'messages' => is_array($messages) ? $messages : array()
+        ));
+    }
+
+    public function upload_images($request)
+    {
+        $user_id = 1;
+
+        if (!isset($_FILES['images'])) {
+            return new WP_Error('no_files', 'No se enviaron archivos', array('status' => 400));
+        }
+
+        $project_id = $request->get_param('project_id');
+        $conversation_id = $request->get_param('conversation_id');
+
+        $image_uploader = new AI_Chat_Image_Uploader();
+        $result = $image_uploader->upload_images($_FILES['images'], $user_id, $project_id, $conversation_id);
+
+        if (!$result['success']) {
+            return new WP_Error('upload_failed', 'Error al subir imágenes', array(
+                'status' => 400,
+                'errors' => $result['errors']
+            ));
+        }
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'files' => $result['files'],
+            'errors' => $result['errors']
         ));
     }
 }

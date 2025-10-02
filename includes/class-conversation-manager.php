@@ -143,6 +143,9 @@ class AI_Chat_Conversation_Manager
         $formatted_messages = array();
 
         foreach ($messages as $message) {
+            $attachments_json = get_post_meta($message->ID, 'attachments', true);
+            $attachments = !empty($attachments_json) ? json_decode($attachments_json, true) : null;
+
             $formatted_messages[] = array(
                 'id' => $message->ID,
                 'role' => get_post_meta($message->ID, 'role', true),
@@ -150,7 +153,8 @@ class AI_Chat_Conversation_Manager
                 'model' => get_post_meta($message->ID, 'model', true),
                 'timestamp' => $message->post_date,
                 'token_count' => get_post_meta($message->ID, 'token_count', true),
-                'cost' => get_post_meta($message->ID, 'cost', true)
+                'cost' => get_post_meta($message->ID, 'cost', true),
+                'attachments' => $attachments
             );
         }
 
