@@ -151,6 +151,7 @@
     messages.forEach(function (msg) {
       const isImage =
         msg.model === "image-generator" ||
+        msg.model === "google/gemini-2.5-flash" ||
         (msg.content && msg.content.startsWith("http"));
       const type = isImage ? "image" : "text";
       appendMessage(msg.role, msg.content, false, type, msg.attachments);
@@ -256,13 +257,27 @@
     if (attachments && attachments.length > 0) {
       messageHtml += '<div class="message-attachments">';
       attachments.forEach(function (attachment) {
-        messageHtml += `<img src="${attachment.file_url}" alt="${attachment.file_name}" class="message-image">`;
+        messageHtml += `
+          <div class="image-wrapper">
+            <img src="${attachment.file_url}" alt="${attachment.file_name}" class="message-image">
+            <button class="btn-download-image" data-url="${attachment.file_url}" data-name="${attachment.file_name}">⬇</button>
+          </div>
+        `;
       });
       messageHtml += "</div>";
     }
 
-    if (type === "image") {
-      messageHtml += `<img src="${content}" alt="Generated image" class="generated-image">`;
+    const isImageUrl =
+      content && /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(content);
+
+    if (isImageUrl) {
+      const imageName = content.split("/").pop().split("?")[0];
+      messageHtml += `
+        <div class="image-wrapper">
+          <img src="${content}" alt="Generated image" class="generated-image">
+          <button class="btn-download-image" data-url="${content}" data-name="${imageName}">⬇</button>
+        </div>
+      `;
     } else if (content) {
       messageHtml += escapeHtml(content);
     }
@@ -317,6 +332,25 @@
     }
   }
 
+  function downloadImage(url, filename) {
+    fetch(url)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = filename || "image.png";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      })
+      .catch((error) => {
+        console.error("Error downloading image:", error);
+        alert("No se pudo descargar la imagen");
+      });
+  }
+
   function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text;
@@ -346,6 +380,12 @@
 
     $("#project-selector").on("change", function () {
       updateImageUploaderContext();
+    });
+
+    $(document).on("click", ".btn-download-image", function () {
+      const url = $(this).data("url");
+      const name = $(this).data("name");
+      downloadImage(url, name);
     });
   }
 

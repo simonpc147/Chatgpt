@@ -128,17 +128,31 @@ class AI_Chat_Conversation_Manager
     {
         $conversation = get_post($conversation_id);
 
+        error_log('=== GET MESSAGES DEBUG ===');
+        error_log('Conversation ID: ' . $conversation_id);
+        error_log('User ID solicitado: ' . $user_id);
+        error_log('Conversation exists: ' . ($conversation ? 'YES' : 'NO'));
+
+        if ($conversation) {
+            error_log('Conversation author: ' . $conversation->post_author);
+            error_log('Match: ' . ($conversation->post_author == $user_id ? 'YES' : 'NO'));
+        }
+
         if (!$conversation || $conversation->post_author != $user_id) {
+            error_log('RETURNING EMPTY - Author mismatch or conversation not found');
             return array();
         }
 
         $messages = get_posts(array(
             'post_type' => 'ai_message',
             'post_parent' => $conversation_id,
+            'post_status' => 'private',
             'posts_per_page' => $limit,
             'orderby' => 'date',
             'order' => 'ASC'
         ));
+
+        error_log('Messages found: ' . count($messages));
 
         $formatted_messages = array();
 
@@ -163,11 +177,20 @@ class AI_Chat_Conversation_Manager
 
     public function add_message($conversation_id, $role, $content, $model = null, $metadata = array())
     {
+        error_log('=== ADD MESSAGE ===');
+        error_log('Conversation ID: ' . $conversation_id);
+        error_log('Role: ' . $role);
+        error_log('Content: ' . substr($content, 0, 100));
+        error_log('Model: ' . $model);
+
         $conversation = get_post($conversation_id);
 
         if (!$conversation) {
+            error_log('ERROR: Conversation not found');
             return false;
         }
+
+        error_log('Conversation found, author: ' . $conversation->post_author);
 
         $message_data = array(
             'post_type' => 'ai_message',
@@ -192,9 +215,13 @@ class AI_Chat_Conversation_Manager
             }
         }
 
+        error_log('Attempting to insert post...');
         $message_id = wp_insert_post($message_data);
 
+        error_log('Message inserted with ID: ' . ($message_id ? $message_id : 'FAILED'));
+
         if (is_wp_error($message_id)) {
+            error_log('WP ERROR: ' . $message_id->get_error_message());
             return false;
         }
 
@@ -230,6 +257,7 @@ class AI_Chat_Conversation_Manager
         $messages = get_posts(array(
             'post_type' => 'ai_message',
             'post_parent' => $conversation_id,
+            'post_status' => 'private',
             'posts_per_page' => -1
         ));
 
@@ -254,6 +282,7 @@ class AI_Chat_Conversation_Manager
         $message_count = get_posts(array(
             'post_type' => 'ai_message',
             'post_parent' => $conversation_id,
+            'post_status' => 'private',
             'posts_per_page' => 1,
             'fields' => 'ids'
         ));
@@ -273,6 +302,7 @@ class AI_Chat_Conversation_Manager
         $messages = get_posts(array(
             'post_type' => 'ai_message',
             'post_parent' => $conversation_id,
+            'post_status' => 'private',
             'posts_per_page' => 1,
             'orderby' => 'date',
             'order' => 'DESC'

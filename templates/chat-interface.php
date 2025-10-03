@@ -77,14 +77,14 @@ $projects = $projects_manager->get_user_projects($user_id);
                     accept="image/jpeg,image/png,image/webp,image/gif"
                     style="display:none">
 
-                <button id="attach-image-btn" class="btn-attach" title="Adjuntar imagen">
-                    📎
-                </button>
-
                 <textarea
                     id="chat-input"
                     placeholder="Escribe tu mensaje aquí... (Shift+Enter para nueva línea)"
                     rows="3"></textarea>
+
+                <button id="attach-image-btn" class="btn-attach" title="Adjuntar imagen">
+                    📎
+                </button>
 
                 <button id="send-btn" class="btn-send">
                     <span class="send-icon">➤</span>

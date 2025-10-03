@@ -18,31 +18,76 @@ class AI_Chat_ImageRouter_Vision_API
             return array('error' => 'No se enviaron imágenes');
         }
 
-        $body = array(
-            'prompt' => $message,
-            'model' => $this->model
-        );
-
-        $image_uploader = new AI_Chat_Image_Uploader();
-
-        foreach ($attachments as $index => $attachment) {
-            $base64_image = $image_uploader->convert_image_to_base64($attachment['file_url']);
-
-            if ($base64_image === false) {
-                error_log('Failed to convert image to base64: ' . $attachment['file_url']);
-                continue;
-            }
-
-            $body['image'][$index] = $base64_image;
+        if (!function_exists('download_url')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
         }
+
+        $boundary = wp_generate_password(24, false);
+
+        $body_parts = array();
+
+        $body_parts[] = "--{$boundary}";
+        $body_parts[] = 'Content-Disposition: form-data; name="prompt"';
+        $body_parts[] = '';
+        $body_parts[] = $message;
+
+        $body_parts[] = "--{$boundary}";
+        $body_parts[] = 'Content-Disposition: form-data; name="model"';
+        $body_parts[] = '';
+        $body_parts[] = $this->model;
+
+        $attachment = $attachments[0];
+        $file_path = $attachment['file_url'];
+
+        if (filter_var($file_path, FILTER_VALIDATE_URL)) {
+            $temp_file = download_url($file_path);
+            if (is_wp_error($temp_file)) {
+                error_log('Failed to download image: ' . $file_path);
+                return array('error' => 'No se pudo descargar la imagen');
+            }
+            $file_path = $temp_file;
+        }
+
+        if (!file_exists($file_path)) {
+            error_log('File not found: ' . $file_path);
+            return array('error' => 'Archivo no encontrado');
+        }
+
+        $file_content = file_get_contents($file_path);
+
+        if ($file_content === false) {
+            error_log('Failed to read file: ' . $file_path);
+            if (isset($temp_file)) {
+                @unlink($temp_file);
+            }
+            return array('error' => 'No se pudo leer el archivo');
+        }
+
+        $file_name = basename($file_path);
+        $file_type = mime_content_type($file_path);
+
+        $body_parts[] = "--{$boundary}";
+        $body_parts[] = 'Content-Disposition: form-data; name="image"; filename="' . $file_name . '"';
+        $body_parts[] = 'Content-Type: ' . $file_type;
+        $body_parts[] = '';
+        $body_parts[] = $file_content;
+
+        if (isset($temp_file)) {
+            @unlink($temp_file);
+        }
+
+        $body_parts[] = "--{$boundary}--";
+        $body_parts[] = '';
+
+        $body = implode("\r\n", $body_parts);
 
         $args = array(
             'method' => 'POST',
             'headers' => array(
                 'Authorization' => 'Bearer ' . trim($api_key),
-                'Content-Type' => 'application/json'
+                'Content-Type' => 'multipart/form-data; boundary=' . $boundary
             ),
-            'body' => json_encode($body),
+            'body' => $body,
             'timeout' => 120
         );
 
