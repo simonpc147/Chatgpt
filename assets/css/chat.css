@@ -300,6 +300,7 @@ body.page-template-ai-chat {
 
 .message-content img {
   max-width: 230px;
+  border-radius: 5px;
 }
 
 .message.user .message-content {
@@ -444,13 +445,12 @@ body.page-template-ai-chat {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.7);
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 5px 5px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   transition: all 0.3s;
   z-index: 10;
 }
@@ -839,7 +839,7 @@ footer {
 
 .btn-logout {
   padding: 10px 20px;
-  margin: 20px;
+  margin: 25px 20px;
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
   border: 1px solid #ef4444;

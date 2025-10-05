@@ -113,3 +113,16 @@ Incluir nuevas clases
 Actualizar Custom Post Types
 
 Usar shortcodes [ai_chat_register] y [ai_chat_login] en páginas
+
+📄 Archivo 1: image-compressor.js
+📍 Ubicación: /assets/js/image-compressor.js
+¿Qué hace?
+Comprime imágenes en el navegador ANTES de subirlas al servidor:
+
+✅ Redimensiona a máximo 1920x1920px
+✅ Comprime a 85% calidad JPEG
+✅ Genera miniaturas de 400x400px
+✅ Reduce típicamente 80-90% el peso
+✅ Muestra estadísticas en consola
+
+Ejemplo: Imagen de 5MB → se convierte a 800KB antes de subir.

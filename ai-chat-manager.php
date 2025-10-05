@@ -136,9 +136,17 @@ class AI_Chat_Manager
         ));
 
         wp_enqueue_script(
+            'ai-chat-image-compressor',
+            AI_CHAT_PLUGIN_URL . 'assets/js/image-compressor.js',
+            array('jquery'),
+            '1.0',
+            true
+        );
+
+        wp_enqueue_script(
             'ai-chat-image-uploader',
             AI_CHAT_PLUGIN_URL . 'assets/js/image-uploader.js',
-            array('jquery'),
+            array('jquery', 'ai-chat-image-compressor'),
             '1.0',
             true
         );
@@ -147,6 +155,14 @@ class AI_Chat_Manager
             'apiUrl' => rest_url('ai-chat/v1'),
             'nonce' => wp_create_nonce('wp_rest')
         ));
+
+        wp_enqueue_script(
+            'ai-chat-lazy-loader',
+            AI_CHAT_PLUGIN_URL . 'assets/js/chat-lazy-loader.js',
+            array('jquery'),
+            '1.0',
+            true
+        );
 
         wp_enqueue_script(
             'dompurify',

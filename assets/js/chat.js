@@ -424,12 +424,6 @@
     });
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML.replace(/\n/g, "<br>");
-  }
-
   function attachEventListeners() {
     $("#new-chat-btn").on("click", createNewConversation);
     $("#send-btn").on("click", sendMessage);

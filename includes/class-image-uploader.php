@@ -8,6 +8,10 @@ class AI_Chat_Image_Uploader
     private $upload_dir;
     private $allowed_types = array('image/jpeg', 'image/png', 'image/webp', 'image/gif');
     private $max_file_size = 10485760;
+    private $max_width = 1920;
+    private $max_height = 1920;
+    private $quality = 85;
+    private $thumbnail_size = 400;
 
     public function __construct()
     {
@@ -74,26 +78,136 @@ class AI_Chat_Image_Uploader
             return array('error' => $user_dir->get_error_message());
         }
 
-        $extension = $this->get_file_extension($file['name']);
+        $extension = 'jpg';
         $filename = time() . '_' . wp_generate_password(8, false) . '.' . $extension;
         $file_path = $user_dir . '/' . $filename;
 
-        if (!move_uploaded_file($file['tmp_name'], $file_path)) {
-            return array('error' => 'Error al guardar archivo');
+        $compressed = $this->compress_image($file['tmp_name'], $file['type'], $file_path);
+        if ($compressed !== true) {
+            if (!move_uploaded_file($file['tmp_name'], $file_path)) {
+                return array('error' => 'Error al guardar archivo');
+            }
         }
+
+        $thumbnail_filename = 'thumb_' . $filename;
+        $thumbnail_path = $user_dir . '/' . $thumbnail_filename;
+        $this->create_thumbnail($file_path, $thumbnail_path);
 
         $wp_upload_dir = wp_upload_dir();
         $relative_path = str_replace($wp_upload_dir['basedir'], '', $file_path);
         $file_url = $wp_upload_dir['baseurl'] . $relative_path;
 
+        $relative_thumb_path = str_replace($wp_upload_dir['basedir'], '', $thumbnail_path);
+        $thumbnail_url = file_exists($thumbnail_path) ? $wp_upload_dir['baseurl'] . $relative_thumb_path : $file_url;
+
         return array(
             'file_path' => $relative_path,
             'file_url' => $file_url,
+            'thumbnail_url' => $thumbnail_url,
             'file_name' => sanitize_file_name($file['name']),
-            'file_size' => $file['size'],
-            'mime_type' => $file['type'],
+            'file_size' => filesize($file_path),
+            'mime_type' => 'image/jpeg',
             'uploaded_at' => current_time('mysql')
         );
+    }
+
+    private function compress_image($source, $mime_type, $destination)
+    {
+        switch ($mime_type) {
+            case 'image/jpeg':
+                $image = @imagecreatefromjpeg($source);
+                break;
+            case 'image/png':
+                $image = @imagecreatefrompng($source);
+                break;
+            case 'image/webp':
+                $image = @imagecreatefromwebp($source);
+                break;
+            case 'image/gif':
+                $image = @imagecreatefromgif($source);
+                break;
+            default:
+                return false;
+        }
+
+        if (!$image) {
+            return false;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        if ($width > $this->max_width || $height > $this->max_height) {
+            $ratio = min($this->max_width / $width, $this->max_height / $height);
+            $new_width = floor($width * $ratio);
+            $new_height = floor($height * $ratio);
+
+            $resized = imagecreatetruecolor($new_width, $new_height);
+
+            imagecopyresampled(
+                $resized,
+                $image,
+                0,
+                0,
+                0,
+                0,
+                $new_width,
+                $new_height,
+                $width,
+                $height
+            );
+
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        $saved = imagejpeg($image, $destination, $this->quality);
+        imagedestroy($image);
+
+        if ($saved) {
+            @chmod($destination, 0644);
+        }
+
+        return $saved;
+    }
+
+    private function create_thumbnail($source, $destination)
+    {
+        $image = @imagecreatefromjpeg($source);
+        if (!$image) {
+            return false;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        $ratio = min($this->thumbnail_size / $width, $this->thumbnail_size / $height);
+        $thumb_width = floor($width * $ratio);
+        $thumb_height = floor($height * $ratio);
+
+        $thumbnail = imagecreatetruecolor($thumb_width, $thumb_height);
+
+        imagecopyresampled(
+            $thumbnail,
+            $image,
+            0,
+            0,
+            0,
+            0,
+            $thumb_width,
+            $thumb_height,
+            $width,
+            $height
+        );
+
+        imagejpeg($thumbnail, $destination, 70);
+
+        imagedestroy($image);
+        imagedestroy($thumbnail);
+
+        @chmod($destination, 0644);
+
+        return true;
     }
 
     private function create_user_directory($user_id, $project_id = null, $conversation_id = null)
