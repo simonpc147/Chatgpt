@@ -87,6 +87,19 @@ class AI_Chat_REST_API
             'callback' => array($this, 'delete_conversation'),
             'permission_callback' => '__return_true'
         ));
+
+        register_rest_route('ai-chat/v1', '/conversations/(?P<id>\d+)', array(
+            'methods' => 'PUT',
+            'callback' => array($this, 'update_conversation'),
+            'permission_callback' => '__return_true',
+            'args' => array(
+                'title' => array(
+                    'required' => true,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field'
+                )
+            )
+        ));
     }
 
     public function check_user_permissions()
@@ -267,6 +280,28 @@ class AI_Chat_REST_API
             'success' => true,
             'files' => $result['files'],
             'errors' => $result['errors']
+        ));
+    }
+
+    public function update_conversation($request)
+    {
+        $conversation_id = $request->get_param('id');
+        $new_title = $request->get_param('title');
+        $user_id = 1;
+
+        $conversation_manager = new AI_Chat_Conversation_Manager();
+        $result = $conversation_manager->update_conversation_title($conversation_id, $user_id, $new_title);
+
+        if ($result) {
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => 'Conversación actualizada'
+            ));
+        }
+
+        return rest_ensure_response(array(
+            'success' => false,
+            'message' => 'Error al actualizar conversación'
         ));
     }
 }

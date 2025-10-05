@@ -74,16 +74,65 @@
       const $item = $("<div>")
         .addClass("conversation-item")
         .attr("data-id", conv.id).html(`
-                    <div class="conversation-content">
-                        <h4>${conv.title}</h4>
-                        <p>${conv.last_message_preview || "Sin mensajes"}</p>
-                    </div>
-                    <button class="btn-delete-conversation" data-id="${
+                <div class="conversation-content">
+                    <h4 class="conversation-title" data-id="${conv.id}">${
+        conv.title
+      }</h4>
+                    <p>${conv.last_message_preview || "Sin mensajes"}</p>
+                </div>
+                <div class="conversation-menu">
+                    <button class="btn-menu-trigger" data-id="${
                       conv.id
-                    }" title="Eliminar conversación">🗑️</button>
-                `);
+                    }">⋮</button>
+                    <div class="dropdown-menu" id="menu-${conv.id}">
+                        <button class="menu-item btn-rename" data-id="${
+                          conv.id
+                        }">
+                            <span class="menu-icon">✏️</span>
+                            Renombrar
+                        </button>
+                        <button class="menu-item btn-delete" data-id="${
+                          conv.id
+                        }">
+                            <span class="menu-icon">🗑️</span>
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
+            `);
       $list.append($item);
     });
+  }
+
+  function renameConversation(conversationId) {
+    const currentTitle = $(
+      `.conversation-title[data-id="${conversationId}"]`
+    ).text();
+    const newTitle = prompt("Nuevo nombre:", currentTitle);
+
+    if (newTitle && newTitle.trim() !== "" && newTitle !== currentTitle) {
+      $.ajax({
+        url: aiChatAjax.resturl + "conversations/" + conversationId,
+        method: "PUT",
+        contentType: "application/json",
+        data: JSON.stringify({
+          title: newTitle.trim(),
+        }),
+        success: function (response) {
+          if (response.success) {
+            loadConversations();
+            if (currentConversationId === conversationId) {
+              $("#chat-title").text(newTitle.trim());
+            }
+          } else {
+            alert("Error al renombrar conversación");
+          }
+        },
+        error: function () {
+          alert("Error al renombrar conversación");
+        },
+      });
+    }
   }
 
   function createNewConversation() {
@@ -440,8 +489,8 @@
       $("#chat-input").val(prompt).focus();
     });
 
-    $(document).on("click", ".conversation-item", function () {
-      const conversationId = $(this).data("id");
+    $(document).on("click", ".conversation-content", function () {
+      const conversationId = $(this).closest(".conversation-item").data("id");
       loadConversation(conversationId);
 
       if (window.innerWidth <= 768) {
@@ -459,12 +508,35 @@
       downloadImage(url, name);
     });
 
-    $(document).on("click", ".btn-delete-conversation", function (e) {
+    $(document).on("click", ".btn-menu-trigger", function (e) {
       e.stopPropagation();
       const conversationId = $(this).data("id");
+      const $menu = $(`#menu-${conversationId}`);
+
+      $(".dropdown-menu").not($menu).removeClass("show");
+      $menu.toggleClass("show");
+    });
+
+    $(document).on("click", ".btn-rename", function (e) {
+      e.stopPropagation();
+      const conversationId = $(this).data("id");
+      $(".dropdown-menu").removeClass("show");
+      renameConversation(conversationId);
+    });
+
+    $(document).on("click", ".btn-delete", function (e) {
+      e.stopPropagation();
+      const conversationId = $(this).data("id");
+      $(".dropdown-menu").removeClass("show");
 
       if (confirm("¿Estás seguro de eliminar esta conversación?")) {
         deleteConversation(conversationId);
+      }
+    });
+
+    $(document).on("click", function (e) {
+      if (!$(e.target).closest(".conversation-menu").length) {
+        $(".dropdown-menu").removeClass("show");
       }
     });
 
