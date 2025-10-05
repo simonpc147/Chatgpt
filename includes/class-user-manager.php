@@ -23,7 +23,7 @@ class AI_Chat_User_Manager
 
     public function handle_registration()
     {
-        check_ajax_referer('ai_chat_register', 'nonce');
+        check_ajax_referer('ai_chat_nonce', 'nonce');
 
         $username = sanitize_user($_POST['username']);
         $email = sanitize_email($_POST['email']);
@@ -54,7 +54,7 @@ class AI_Chat_User_Manager
 
     public function handle_login()
     {
-        check_ajax_referer('ai_chat_login', 'nonce');
+        check_ajax_referer('ai_chat_nonce', 'nonce');
 
         $username = sanitize_user($_POST['username']);
         $password = $_POST['password'];
@@ -70,7 +70,7 @@ class AI_Chat_User_Manager
 
         wp_send_json_success(array(
             'message' => 'Login exitoso',
-            'redirect_url' => $this->get_dashboard_url()
+            'redirect_url' => home_url('/ai-chat/')
         ));
     }
 
@@ -122,7 +122,7 @@ class AI_Chat_User_Manager
     public function redirect_after_login($user_login, $user)
     {
         if (!is_admin()) {
-            wp_safe_redirect($this->get_dashboard_url());
+            wp_safe_redirect(home_url('/ai-chat/'));
             exit;
         }
     }

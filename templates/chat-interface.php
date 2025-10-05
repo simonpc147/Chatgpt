@@ -25,6 +25,7 @@ $projects = $projects_manager->get_user_projects($user_id);
 
     <div class="chat-main">
         <div class="chat-header">
+            <button id="toggle-sidebar" class="btn-toggle-sidebar">☰</button>
             <div class="chat-info">
                 <h2 id="chat-title">Selecciona una conversación</h2>
                 <select id="model-selector" class="model-selector">
@@ -36,7 +37,7 @@ $projects = $projects_manager->get_user_projects($user_id);
                 </select>
             </div>
 
-            <div class="chat-actions">
+            <!-- <div class="chat-actions">
                 <select id="project-selector">
                     <option value="">Sin proyecto</option>
                     <?php foreach ($projects as $project): ?>
@@ -45,23 +46,23 @@ $projects = $projects_manager->get_user_projects($user_id);
                         </option>
                     <?php endforeach; ?>
                 </select>
-            </div>
+            </div> -->
         </div>
 
         <div class="chat-messages" id="chat-messages">
             <div class="welcome-screen">
-                <h2>¡Bienvenido al Chat AI!</h2>
-                <p>Selecciona un modelo y comienza a chatear</p>
+                <h2>¡Bienvenido a AI Chat!</h2>
+                <p>Tu asistente personal de IA</p>
                 <div class="quick-actions">
-                    <button class="quick-action" data-prompt="Explícame como si tuviera 5 años: ">
-                        📚 Explica simple
-                    </button>
-                    <button class="quick-action" data-prompt="Ayúdame a escribir código para: ">
-                        💻 Ayuda con código
-                    </button>
-                    <button class="quick-action" data-prompt="Dame ideas creativas sobre: ">
-                        💡 Ideas creativas
-                    </button>
+                    <div class="quick-action" data-prompt="Explícame como si tuviera 5 años: ">
+                        📚 Ayúdame a entender conceptos complejos
+                    </div>
+                    <div class="quick-action" data-prompt="Ayúdame a escribir código para: ">
+                        💻 Script de Python para reportes diarios
+                    </div>
+                    <div class="quick-action" data-prompt="Dame ideas creativas sobre: ">
+                        💡 Hazme un quiz sobre civilizaciones antiguas
+                    </div>
                 </div>
             </div>
         </div>
@@ -77,18 +78,17 @@ $projects = $projects_manager->get_user_projects($user_id);
                     accept="image/jpeg,image/png,image/webp,image/gif"
                     style="display:none">
 
-                <textarea
-                    id="chat-input"
-                    placeholder="Escribe tu mensaje aquí... (Shift+Enter para nueva línea)"
-                    rows="3"></textarea>
-
                 <button id="attach-image-btn" class="btn-attach" title="Adjuntar imagen">
                     📎
                 </button>
 
+                <textarea
+                    id="chat-input"
+                    placeholder="Escribe tu mensaje aquí..."
+                    rows="1"></textarea>
+
                 <button id="send-btn" class="btn-send">
                     <span class="send-icon">➤</span>
-                    Enviar
                 </button>
             </div>
         </div>

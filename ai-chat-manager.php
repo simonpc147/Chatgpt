@@ -113,7 +113,35 @@ class AI_Chat_Manager
 
     public function load_frontend_assets()
     {
-        wp_enqueue_script('ai-chat-image-uploader', AI_CHAT_PLUGIN_URL . 'assets/js/image-uploader.js', array('jquery'), '1.0', true);
+        wp_enqueue_style(
+            'ai-chat-frontend-css',
+            AI_CHAT_PLUGIN_URL . 'assets/css/frontend.css',
+            array(),
+            '1.0'
+        );
+
+        wp_enqueue_script(
+            'ai-chat-frontend',
+            AI_CHAT_PLUGIN_URL . 'assets/js/frontend.js',
+            array('jquery'),
+            '1.0',
+            true
+        );
+
+        wp_localize_script('ai-chat-frontend', 'aiChatData', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('ai_chat_nonce'),
+            'rest_url' => rest_url('ai-chat/v1/'),
+            'rest_nonce' => wp_create_nonce('wp_rest')
+        ));
+
+        wp_enqueue_script(
+            'ai-chat-image-uploader',
+            AI_CHAT_PLUGIN_URL . 'assets/js/image-uploader.js',
+            array('jquery'),
+            '1.0',
+            true
+        );
 
         wp_localize_script('ai-chat-image-uploader', 'aiChatSettings', array(
             'apiUrl' => rest_url('ai-chat/v1'),

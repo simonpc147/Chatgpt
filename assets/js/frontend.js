@@ -9,10 +9,10 @@
         email: $("#reg-email").val(),
         password: $("#reg-password").val(),
         plan: $("#plan").val(),
-        nonce: wp.create_nonce("ai_chat_register"),
+        nonce: aiChatData.nonce,
       };
 
-      $.post(aiChatAjax.ajaxurl, formData, function (response) {
+      $.post(aiChatData.ajax_url, formData, function (response) {
         if (response.success) {
           $("#register-message").html(
             '<p style="color: green;">' + response.data.message + "</p>"
@@ -35,10 +35,10 @@
         action: "ai_chat_login",
         username: $("#username").val(),
         password: $("#password").val(),
-        nonce: wp.create_nonce("ai_chat_login"),
+        nonce: aiChatData.nonce,
       };
 
-      $.post(aiChatAjax.ajaxurl, formData, function (response) {
+      $.post(aiChatData.ajax_url, formData, function (response) {
         if (response.success) {
           $("#login-message").html(
             '<p style="color: green;">' + response.data.message + "</p>"
@@ -58,13 +58,16 @@
 
       if (projectName) {
         $.ajax({
-          url: aiChatAjax.resturl + "projects",
+          url: aiChatData.rest_url + "projects",
           method: "POST",
           data: JSON.stringify({
             title: projectName,
             description: "",
           }),
           contentType: "application/json",
+          beforeSend: function (xhr) {
+            xhr.setRequestHeader("X-WP-Nonce", aiChatData.rest_nonce);
+          },
           success: function (response) {
             alert("Proyecto creado exitosamente");
             location.reload();
@@ -80,12 +83,15 @@
       e.preventDefault();
 
       $.ajax({
-        url: aiChatAjax.resturl + "conversations",
+        url: aiChatData.rest_url + "conversations",
         method: "POST",
         data: JSON.stringify({
           title: "Nueva Conversación",
         }),
         contentType: "application/json",
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("X-WP-Nonce", aiChatData.rest_nonce);
+        },
         success: function (response) {
           alert("Conversación creada. ID: " + response.conversation_id);
           jQuery("#open-chat").click();
@@ -117,13 +123,16 @@
       );
 
       $.ajax({
-        url: aiChatAjax.resturl + "send-message",
+        url: aiChatData.rest_url + "send-message",
         method: "POST",
         data: JSON.stringify({
           message: message,
           model: model,
         }),
         contentType: "application/json",
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("X-WP-Nonce", aiChatData.rest_nonce);
+        },
         success: function (response) {
           $("#chat-messages").append(
             '<div class="message ai-message"><strong>AI:</strong> ' +
@@ -143,6 +152,20 @@
       if (e.which === 13 && !e.shiftKey) {
         e.preventDefault();
         $("#send-message").click();
+      }
+    });
+  });
+
+  $(document).ready(function () {
+    $(".toggle-password").on("click", function () {
+      const passwordInput = $("#password");
+
+      if (passwordInput.attr("type") === "password") {
+        passwordInput.attr("type", "text");
+        $(this).text("🙈");
+      } else {
+        passwordInput.attr("type", "password");
+        $(this).text("👁️");
       }
     });
   });

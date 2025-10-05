@@ -45,15 +45,21 @@ class AI_Chat_Shortcodes
             time()
         );
 
-        // Cargar assets del chat si estamos en la página de chat
         if (is_page('ai-chat') || has_shortcode(get_post()->post_content ?? '', 'ai_chat_interface')) {
             wp_enqueue_script(
                 'ai-chat-interface',
                 AI_CHAT_PLUGIN_URL . 'assets/js/chat.js',
-                array('jquery'),
+                array('jquery', 'ai-chat-frontend'),
                 time(),
                 true
             );
+
+            wp_localize_script('ai-chat-interface', 'aiChatAjax', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'resturl' => rest_url('ai-chat/v1/'),
+                'nonce' => wp_create_nonce('ai_chat_nonce'),
+                'rest_nonce' => wp_create_nonce('wp_rest')
+            ));
 
             wp_enqueue_style(
                 'ai-chat-interface',
@@ -62,12 +68,6 @@ class AI_Chat_Shortcodes
                 time()
             );
         }
-
-        wp_localize_script('ai-chat-frontend', 'aiChatAjax', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'resturl' => rest_url('ai-chat/v1/'),
-            'nonce' => wp_create_nonce('ai_chat_nonce')
-        ));
     }
 
     public function dashboard_shortcode($atts)
@@ -101,6 +101,27 @@ class AI_Chat_Shortcodes
     {
         if (!is_user_logged_in()) {
             return '<p>Debes <a href="' . wp_login_url() . '">iniciar sesión</a> para usar el chat.</p>';
+        }
+
+        $user_id = get_current_user_id();
+        $conversation_manager = new AI_Chat_Conversation_Manager();
+
+        $existing_conversations = $conversation_manager->get_user_conversations($user_id);
+
+        if (empty($existing_conversations)) {
+            $new_conversation = $conversation_manager->create_conversation($user_id, 'Nueva Conversación');
+
+            if ($new_conversation) {
+                wp_localize_script('ai-chat-interface', 'aiChatInitial', array(
+                    'conversationId' => $new_conversation,
+                    'autoLoad' => true
+                ));
+            }
+        } else {
+            wp_localize_script('ai-chat-interface', 'aiChatInitial', array(
+                'conversationId' => $existing_conversations[0]['id'],
+                'autoLoad' => true
+            ));
         }
 
         ob_start();

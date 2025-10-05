@@ -81,6 +81,12 @@ class AI_Chat_REST_API
             'callback' => array($this, 'upload_images'),
             'permission_callback' => '__return_true'
         ));
+
+        register_rest_route('ai-chat/v1', '/conversations/(?P<id>\d+)', array(
+            'methods' => 'DELETE',
+            'callback' => array($this, 'delete_conversation'),
+            'permission_callback' => '__return_true'
+        ));
     }
 
     public function check_user_permissions()
@@ -125,6 +131,27 @@ class AI_Chat_REST_API
         }
 
         return rest_ensure_response($response);
+    }
+
+    public function delete_conversation($request)
+    {
+        $conversation_id = $request->get_param('id');
+        $user_id = 1;
+
+        $conversation_manager = new AI_Chat_Conversation_Manager();
+        $result = $conversation_manager->delete_conversation($conversation_id, $user_id);
+
+        if ($result) {
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => 'Conversación eliminada'
+            ));
+        }
+
+        return rest_ensure_response(array(
+            'success' => false,
+            'message' => 'Error al eliminar conversación'
+        ));
     }
 
     public function get_projects($request)

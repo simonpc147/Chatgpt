@@ -68,8 +68,13 @@
       const $item = $("<div>")
         .addClass("conversation-item")
         .attr("data-id", conv.id).html(`
-                    <h4>${conv.title}</h4>
-                    <p>${conv.last_message_preview || "Sin mensajes"}</p>
+                    <div class="conversation-content">
+                        <h4>${conv.title}</h4>
+                        <p>${conv.last_message_preview || "Sin mensajes"}</p>
+                    </div>
+                    <button class="btn-delete-conversation" data-id="${
+                      conv.id
+                    }" title="Eliminar conversación">🗑️</button>
                 `);
       $list.append($item);
     });
@@ -84,7 +89,7 @@
       contentType: "application/json",
       data: JSON.stringify({
         title: "Nueva Conversación",
-        project_id: projectId,
+        ...(projectId ? { project_id: parseInt(projectId) } : {}),
       }),
       success: function (response) {
         if (response.success) {
@@ -180,10 +185,43 @@
     }
 
     if (!currentConversationId) {
-      alert("Primero crea una conversación");
+      await createConversationAndSend(message, model, hasImages);
       return;
     }
 
+    processSendMessage(message, model, hasImages);
+  }
+
+  async function createConversationAndSend(message, model, hasImages) {
+    const projectId = $("#project-selector").val() || null;
+
+    $.ajax({
+      url: aiChatAjax.resturl + "conversations",
+      method: "POST",
+      contentType: "application/json",
+      beforeSend: function (xhr) {
+        xhr.setRequestHeader("X-WP-Nonce", aiChatAjax.rest_nonce);
+      },
+      data: JSON.stringify({
+        title: "Nueva Conversación",
+        ...(projectId ? { project_id: parseInt(projectId) } : {}),
+      }),
+      success: function (response) {
+        if (response.success) {
+          currentConversationId = response.conversation_id;
+          updateImageUploaderContext();
+          loadConversations();
+          $("#chat-title").text("Nueva Conversación");
+          processSendMessage(message, model, hasImages);
+        }
+      },
+      error: function () {
+        alert("Error al crear conversación");
+      },
+    });
+  }
+
+  async function processSendMessage(message, model, hasImages) {
     isLoading = true;
     $("#send-btn").prop("disabled", true);
     $("#chat-input").val("");
@@ -351,6 +389,28 @@
       });
   }
 
+  function deleteConversation(conversationId) {
+    $.ajax({
+      url: aiChatAjax.resturl + "conversations/" + conversationId,
+      method: "DELETE",
+      success: function (response) {
+        if (response.success) {
+          if (currentConversationId === conversationId) {
+            currentConversationId = null;
+            clearMessages();
+            $("#chat-title").text("Selecciona una conversación");
+          }
+          loadConversations();
+        } else {
+          alert("Error al eliminar conversación");
+        }
+      },
+      error: function () {
+        alert("Error al eliminar conversación");
+      },
+    });
+  }
+
   function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text;
@@ -376,6 +436,10 @@
     $(document).on("click", ".conversation-item", function () {
       const conversationId = $(this).data("id");
       loadConversation(conversationId);
+
+      if (window.innerWidth <= 768) {
+        $(".chat-sidebar").removeClass("active");
+      }
     });
 
     $("#project-selector").on("change", function () {
@@ -386,6 +450,19 @@
       const url = $(this).data("url");
       const name = $(this).data("name");
       downloadImage(url, name);
+    });
+
+    $(document).on("click", ".btn-delete-conversation", function (e) {
+      e.stopPropagation();
+      const conversationId = $(this).data("id");
+
+      if (confirm("¿Estás seguro de eliminar esta conversación?")) {
+        deleteConversation(conversationId);
+      }
+    });
+
+    $("#toggle-sidebar").on("click", function () {
+      $(".chat-sidebar").toggleClass("active");
     });
   }
 
