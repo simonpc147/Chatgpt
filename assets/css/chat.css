@@ -555,6 +555,10 @@ body.page-template-ai-chat {
   margin-right: 12px;
 }
 
+.chat-info {
+  display: contents;
+}
+
 header,
 footer {
   display: none;
@@ -748,4 +752,115 @@ footer {
 header,
 footer {
   display: none;
+}
+
+/* Estilos para contenido Markdown en mensajes */
+.message-content ul,
+.message-content ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.message-content ul li {
+  list-style-type: disc;
+  margin-bottom: 6px;
+}
+
+.message-content ol li {
+  list-style-type: decimal;
+  margin-bottom: 6px;
+}
+
+.message-content p {
+  margin: 8px 0;
+}
+
+.message-content strong {
+  font-weight: 700;
+}
+
+.message-content em {
+  font-style: italic;
+}
+
+.message-content code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+}
+
+.message-content pre {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.message-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.message-content a {
+  color: #4a9eff;
+  text-decoration: underline;
+}
+
+.message-content a:hover {
+  color: #6bb0ff;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+  margin: 16px 0 8px 0;
+  font-weight: 700;
+}
+
+.message-content h1 {
+  font-size: 20px;
+}
+.message-content h2 {
+  font-size: 18px;
+}
+.message-content h3 {
+  font-size: 16px;
+}
+
+/* Estilos para el botón de cerrar sesión */
+
+.chat-actions {
+  display: contents;
+  text-align: center;
+}
+
+.btn-logout {
+  padding: 10px 20px;
+  margin: 20px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+  display: inline-block;
+}
+
+.btn-logout:hover {
+  background: #ef4444;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+@media (max-width: 768px) {
+  .btn-logout {
+    font-size: 12px;
+    padding: 8px 16px;
+  }
 }

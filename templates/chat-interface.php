@@ -21,6 +21,13 @@ $projects = $projects_manager->get_user_projects($user_id);
         <div class="conversations-list" id="conversations-list">
             <p class="loading">Cargando conversaciones...</p>
         </div>
+
+        <div class="chat-actions">
+            <a href="<?php echo wp_logout_url(home_url('/login/')); ?>" class="btn-logout" title="Cerrar sesión">
+                Cerrar sesión
+            </a>
+        </div>
+
     </div>
 
     <div class="chat-main">

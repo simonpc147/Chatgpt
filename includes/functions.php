@@ -74,3 +74,59 @@ function ai_chat_validate_plan($plan)
     $valid_plans = array('free', 'premium', 'enterprise');
     return in_array($plan, $valid_plans) ? $plan : 'free';
 }
+
+
+// ========== REDIRECCIONES AUTOMÁTICAS ==========
+
+
+function ai_chat_handle_redirects()
+{
+    if (is_admin()) {
+        return;
+    }
+
+    $is_logged_in = is_user_logged_in();
+    $current_url = trim($_SERVER['REQUEST_URI'], '/');
+
+    $allowed_pages = array('ai-chat', 'logout', 'profile', 'settings');
+
+    if ($is_logged_in && !in_array($current_url, $allowed_pages) && $current_url !== '') {
+        if (strpos($current_url, 'wp-admin') === false && strpos($current_url, 'wp-login') === false) {
+            wp_redirect(home_url('/ai-chat/'));
+            exit;
+        }
+    }
+
+    if (!$is_logged_in && $current_url === 'ai-chat') {
+        wp_redirect(home_url('/login/'));
+        exit;
+    }
+}
+add_action('template_redirect', 'ai_chat_handle_redirects');
+
+function ai_chat_quick_access()
+{
+    if (isset($_GET['goto']) && $_GET['goto'] === 'chat' && is_user_logged_in()) {
+        wp_redirect(home_url('/ai-chat/'));
+        exit;
+    }
+}
+add_action('template_redirect', 'ai_chat_quick_access');
+
+
+function ai_chat_force_redirect()
+{
+    if (is_user_logged_in()) {
+        $current_url = trim($_SERVER['REQUEST_URI'], '/');
+
+        if ($current_url !== 'ai-chat' && !is_admin()) {
+?>
+            <script>
+                window.location.href = '<?php echo home_url('/ai-chat/'); ?>';
+            </script>
+<?php
+            exit;
+        }
+    }
+}
+add_action('wp_head', 'ai_chat_force_redirect', 1);

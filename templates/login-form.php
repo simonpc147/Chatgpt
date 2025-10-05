@@ -1,3 +1,10 @@
+<?php
+if (is_user_logged_in()) {
+    wp_redirect(home_url('/ai-chat/'));
+    exit;
+}
+?>
+
 <div class="ai-chat-login-wrapper">
     <div class="login-container">
         <div class="login-header">

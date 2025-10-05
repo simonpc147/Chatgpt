@@ -9,6 +9,12 @@
     }
   }
 
+  function decodeHTMLEntities(text) {
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
   function loadModels() {
     $.ajax({
       url: aiChatAjax.resturl + "get-models",
@@ -317,7 +323,14 @@
         </div>
       `;
     } else if (content) {
-      messageHtml += escapeHtml(content);
+      const decodedContent = decodeHTMLEntities(content);
+
+      if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
+        const html = marked.parse(decodedContent);
+        messageHtml += DOMPurify.sanitize(html);
+      } else {
+        messageHtml += decodedContent.replace(/\n/g, "<br>");
+      }
     }
 
     messageHtml += `<div class="message-meta">${new Date().toLocaleTimeString()}</div>`;

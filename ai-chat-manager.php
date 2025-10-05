@@ -147,6 +147,22 @@ class AI_Chat_Manager
             'apiUrl' => rest_url('ai-chat/v1'),
             'nonce' => wp_create_nonce('wp_rest')
         ));
+
+        wp_enqueue_script(
+            'dompurify',
+            'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js',
+            array(),
+            '3.0.6',
+            true
+        );
+
+        wp_enqueue_script(
+            'marked-js',
+            'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
+            array('dompurify'),
+            '4.0.0',
+            true
+        );
     }
 }
 
